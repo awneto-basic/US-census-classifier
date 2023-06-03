@@ -204,7 +204,7 @@ print(f"Ordinal categorical features: {ordinal_cols}")
 
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder
 
-cat_preprocessor = OneHotEncoder(handle_unknown="ignore")
+cat_preprocessor = OneHotEncoder(handle_unknown="ignore", sparse=False)
 num_preprocessor = StandardScaler()
 
 education_levels = [' Children', ' Less than 1st grade', ' 1st 2nd 3rd or 4th grade', ' 5th or 6th grade',
