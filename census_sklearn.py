@@ -137,43 +137,13 @@ features_to_remove = ["detailed industry recode","detailed occupation recode","w
                       "migration code-move within reg","live in this house 1 year ago", "migration prev res in sunbelt",
                       "capital gains","capital losses","hispanic origin","member of a labor union",
                       "reason for unemployment", "state of previous residence", "detailed household summary in household",
-                      "country of birth father","country of birth mother", "country of birth self"]
+                      "country of birth father","country of birth mother", "country of birth self",
+                      "major industry code","fill inc questionnaire for veterans admin","veterans benefits"]
 train_data = train_data.drop(columns=features_to_remove)
 test_data = test_data.drop(columns=features_to_remove)
 
 print(train_data.dtypes)
 
-'''
-age                                           int64
-class of worker                              object
-education                                    object
-wage per hour                                 int64
-marital stat                                 object
-major industry code                          object
-major occupation code                        object
-race                                         object
-hispanic origin                              object
-sex                                          object
-member of a labor union                      object
-reason for unemployment                      object
-full or part time employment stat            object
-dividends from stocks                         int64
-state of previous residence                  object
-detailed household summary in household      object
-num persons worked for employer               int64
-family members under 18                      object
-country of birth father                      object
-country of birth mother                      object
-country of birth self                        object
-citizenship                                  object
-own business or self employed                 int64
-fill inc questionnaire for veterans admin    object
-veterans benefits                             int64
-weeks worked in year                          int64
->50k                                         object
-net capital gains                             int64
-
-'''
 
 # selecting the target class
 
@@ -204,7 +174,7 @@ print(f"Ordinal categorical features: {ordinal_cols}")
 
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder
 
-cat_preprocessor = OneHotEncoder(handle_unknown="ignore", sparse=False)
+cat_preprocessor = OneHotEncoder(handle_unknown="ignore")
 num_preprocessor = StandardScaler()
 
 education_levels = [' Children', ' Less than 1st grade', ' 1st 2nd 3rd or 4th grade', ' 5th or 6th grade',
@@ -275,6 +245,7 @@ score = model_3.score(test_data, test_target)
 print(f"Accuracy of the DecisionTreeClassifier: {score:.3f}")
 
 # Model 4 - HistGradientBoostingClassifier
+'''
 model_4 = Pipeline(
     [
         ("pre-processor",preprocessor),
@@ -284,7 +255,7 @@ model_4 = Pipeline(
 model_4.fit(train_data,train_target)
 score = model_4.score(test_data, test_target)
 print(f"Accuracy of the HistGradientBoostingClassifier: {score:.3f}")
-
+'''
 
 # Model 5 - RandomForestClassifier
 model_5 = Pipeline(
