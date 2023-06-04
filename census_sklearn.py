@@ -315,7 +315,7 @@ print("\n")
 model_5 = Pipeline(
     [
         ("pre-processor",preprocessor),
-        ("classifier", RandomForestClassifier())
+        ("classifier", RandomForestClassifier(max_depth= 5))
     ]
 )
 model_5.fit(train_data,train_target_encoded)
@@ -330,7 +330,7 @@ print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
 print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
 print("\n")
 
-
+'''
 # Model 6 - BalancedBaggingClassifier
 hgbc = HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0)
 model_6 = Pipeline(
@@ -352,7 +352,7 @@ print("BalancedBaggingClassifier")
 print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
 print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
 print("\n")
-
+'''
 
 
 
