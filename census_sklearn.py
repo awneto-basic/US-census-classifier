@@ -124,23 +124,41 @@ year                                           int64
 >50k                                          object
 dtype: object
 '''
+# DATA PRE-PROCESSING
 
 # combining capital gains and capital losses into a net capital gain feature
 train_data['net capital gains'] = train_data['capital gains'] - train_data['capital losses']
 test_data['net capital gains'] = test_data['capital gains'] - test_data['capital losses']
 
+print(train_data.size)
+train_data = train_data.drop_duplicates()
+print(train_data.size)
+
+
+train_data[">50k"] = train_data[">50k"].replace("-50000", "<50k")
+train_data[">50k"] = train_data[">50k"].replace(" 50000+.", ">50k")
+test_data[">50k"] = test_data[">50k"].replace(" - 50000.", "<50k")
+test_data[">50k"] = test_data[">50k"].replace(" 50000+.", ">50k")
+
+print(train_data[">50k"][:30])
+print(test_data[">50k"][:30])
+
 
 # removing features deemed to be redundant / irrelevant
+# removing the "wage per hour" feature because most instances of this feature are zero; feature won't bring in much information
+# removing the "major occupation code" feature because most instances of this feature are "not in universe", thus not bringing valuable predicting information
 features_to_remove = ["detailed industry recode","detailed occupation recode","weight","year",
                       "region of previous residence","enroll in edu inst last wk", "tax filer stat",
                       "detailed household and family stat","migration code-change in msa","migration code-change in reg",
                       "migration code-move within reg","live in this house 1 year ago", "migration prev res in sunbelt",
                       "capital gains","capital losses","hispanic origin","member of a labor union",
                       "reason for unemployment", "state of previous residence", "detailed household summary in household",
-                      "country of birth father","country of birth mother", "country of birth self",
-                      "major industry code","fill inc questionnaire for veterans admin","veterans benefits"]
+                      "country of birth father","country of birth mother",
+                      "major industry code","fill inc questionnaire for veterans admin","veterans benefits",
+                      "wage per hour", "major occupation code"]
 train_data = train_data.drop(columns=features_to_remove)
 test_data = test_data.drop(columns=features_to_remove)
+
 
 print(train_data.dtypes)
 
@@ -152,9 +170,6 @@ train_data = train_data.drop(columns=[">50k"])
 
 test_target = test_data[">50k"]
 test_data = test_data.drop(columns=[">50k"])
-
-
-# DATA PRE-PROCESSING
 
 
 from sklearn.compose import make_column_selector as selector
@@ -184,7 +199,7 @@ education_levels = [' Children', ' Less than 1st grade', ' 1st 2nd 3rd or 4th gr
     ' Bachelors degree(BA AB BS)', ' Masters degree(MA MS MEng MEd MSW MBA)', ' Doctorate degree(PhD EdD)']
 # note: children get assigned a level of zero
 
-ord_preprocessor = OrdinalEncoder(categories=[education_levels])
+ord_preprocessor = OrdinalEncoder(categories=[education_levels], handle_unknown="use_encoded_value", unknown_value=-1)
 
 from sklearn.compose import ColumnTransformer
 
@@ -193,8 +208,14 @@ preprocessor = ColumnTransformer(
         ("one-hot-encoder", cat_preprocessor, cat_cols),
         ("standard-scaler", num_preprocessor, num_cols),
         ("ordinal-encoder", ord_preprocessor, ordinal_cols)
-    ]
+    ], remainder="passthrough"
 )
+
+from sklearn.preprocessing import LabelEncoder
+label_encoder = LabelEncoder()
+train_target_encoded = label_encoder.fit_transform(train_target)
+test_target_encoded = label_encoder.fit_transform(test_target)
+
 
 # Building and training models
 
@@ -204,7 +225,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
+from imblearn.ensemble import BalancedBaggingClassifier
+from sklearn.metrics import roc_auc_score
 
 # Model 1 - Baseline model (most frequent category)
 model_1 = Pipeline(
@@ -214,10 +236,17 @@ model_1 = Pipeline(
     ]
 )
 
-model_1.fit(train_data,train_target)
-score = model_1.score(test_data, test_target)
-print(f"Accuracy of the dummy classifier: {score:.3f}")
-# Accuracy of the dummy classifier: 0.000
+model_1.fit(train_data,train_target_encoded)
+score_train = model_1.score(train_data, train_target_encoded)
+score_test = model_1.score(test_data, test_target_encoded)
+pred_train = model_1.predict(train_data)
+pred_test = model_1.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("Dummy classifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
 
 
 # Model 2 - LogisticRegression
@@ -227,10 +256,17 @@ model_2 = Pipeline(
         ("classifier", LogisticRegression(max_iter=1000))
     ]
 )
-model_2.fit(train_data,train_target)
-score = model_2.score(test_data, test_target)
-print(f"Accuracy of the Logistic Regression classifier: {score:.3f}")
-
+model_2.fit(train_data,train_target_encoded)
+score_train = model_2.score(train_data, train_target_encoded)
+score_test = model_2.score(test_data, test_target_encoded)
+pred_train = model_2.predict(train_data)
+pred_test = model_2.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("LogisticRegression classifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
 
 # Model 3 - DecisionTreeClassifier
 
@@ -240,22 +276,40 @@ model_3 = Pipeline(
         ("classifier", DecisionTreeClassifier())
     ]
 )
-model_3.fit(train_data,train_target)
-score = model_3.score(test_data, test_target)
-print(f"Accuracy of the DecisionTreeClassifier: {score:.3f}")
+model_3.fit(train_data,train_target_encoded)
+score_train = model_3.score(train_data, train_target_encoded)
+score_test = model_3.score(test_data, test_target_encoded)
+pred_train = model_3.predict(train_data)
+pred_test = model_3.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("DecisionTreeClassifier classifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
 
-# Model 4 - HistGradientBoostingClassifier
 '''
+# Model 4 - HistGradientBoostingClassifier
+
 model_4 = Pipeline(
     [
         ("pre-processor",preprocessor),
         ("classifier", HistGradientBoostingClassifier())
     ]
 )
-model_4.fit(train_data,train_target)
-score = model_4.score(test_data, test_target)
-print(f"Accuracy of the HistGradientBoostingClassifier: {score:.3f}")
+model_4.fit(train_data,train_target_encoded)
+score_train = model_4.score(train_data, train_target_encoded)
+score_test = model_4.score(test_data, test_target_encoded)
+pred_train = model_4.predict(train_data)
+pred_test = model_4.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("HistGradientBoostingClassifier classifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
 '''
+
 
 # Model 5 - RandomForestClassifier
 model_5 = Pipeline(
@@ -264,18 +318,41 @@ model_5 = Pipeline(
         ("classifier", RandomForestClassifier())
     ]
 )
-model_5.fit(train_data,train_target)
-score = model_5.score(test_data, test_target)
-print(f"Accuracy of the RandomForestClassifier: {score:.3f}")
+model_5.fit(train_data,train_target_encoded)
+score_train = model_5.score(train_data, train_target_encoded)
+score_test = model_5.score(test_data, test_target_encoded)
+pred_train = model_5.predict(train_data)
+pred_test = model_5.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("RandomForestClassifier classifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
 
 
-# Model 6 - Support vector classifier
+# Model 6 - BalancedBaggingClassifier
+hgbc = HistGradientBoostingClassifier(max_iter=1000, early_stopping=True, random_state=0)
 model_6 = Pipeline(
     [
         ("pre-processor",preprocessor),
-        ("classifier", SVC())
+        ("classifier",
+        BalancedBaggingClassifier(hgbc, n_estimators=50, n_jobs=2, random_state=0)
+        )
     ]
 )
-model_6.fit(train_data,train_target)
-score = model_6.score(test_data, test_target)
-print(f"Accuracy of the Support vector classifier: {score:.3f}")
+model_6.fit(train_data,train_target_encoded)
+score_train = model_6.score(train_data, train_target_encoded)
+score_test = model_6.score(test_data, test_target_encoded)
+pred_train = model_6.predict(train_data)
+pred_test = model_6.predict(test_data)
+roc_score_train = roc_auc_score(train_target_encoded, pred_train)
+roc_score_test = roc_auc_score(test_target_encoded, pred_test)
+print("BalancedBaggingClassifier")
+print(f"Accuracy: {score_train:.3f}, {score_test:.3f}")
+print(f"ROC AUC score: {roc_score_train:.3f}, {roc_score_test:.3f}")
+print("\n")
+
+
+
+

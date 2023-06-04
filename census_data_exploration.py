@@ -142,14 +142,17 @@ test_data.drop(columns=features_to_remove)
 
 # 1 - Histogram
 
+hist_features = ['age','wage per hour']
 
-plt.figure(figsize=(8, 6))
-sns.histplot(data=train_data, x='age', hue='>50k', kde=True)
-plt.title(f'Distribution of age by Income')
-plt.xlabel("age")
-plt.ylabel('Count')
-plt.legend(title='Income', labels=['<=50k', '>50k'])
-plt.show()
+for f in hist_features:
+
+    plt.figure(figsize=(8, 6))
+    sns.histplot(data=train_data, x=f, hue='>50k', kde=True)
+    plt.title(f'Distribution of {f} by Income')
+    plt.xlabel(f)
+    plt.ylabel('Count')
+    plt.legend(title='Income', labels=['<=50k', '>50k'])
+    plt.show()
 
 # 2 - Bar plots
 
@@ -164,6 +167,15 @@ for i, f in enumerate(bar_features):
     plt.legend(title='Income', labels=['<=50k', '>50k'])
 
 plt.tight_layout()
+plt.show()
+
+f = "major occupation code"
+plt.figure(figsize=(8, 6))
+sns.countplot(data=train_data, y=f, hue='>50k')
+plt.title(f'Frequency of {f} by Income')
+plt.xlabel("Count")
+plt.ylabel(f)
+plt.legend(title='Income', labels=['<=50k', '>50k'])
 plt.show()
 
 # 3 - violin plots
